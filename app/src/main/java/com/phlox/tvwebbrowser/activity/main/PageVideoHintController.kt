@@ -2,6 +2,7 @@ package com.phlox.tvwebbrowser.activity.main
 
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import androidx.activity.OnBackPressedCallback
 import com.phlox.tvwebbrowser.webengine.MediaState
 import com.phlox.tvwebbrowser.webengine.PageVideo
@@ -15,16 +16,23 @@ import com.phlox.tvwebbrowser.webengine.PageVideo
  * while the [Host] allows hints (the setting). It hides after [SHOWN_MS], or at once when the page or the tab
  * changes, something covers the page, the page goes fullscreen or the video is no longer known. Back while it
  * shows ([backCallback], also while it fades out after its time) opens the Videos panel at the video.
+ *
+ * When the [Host] allows the automatic player, the same rules open the video in the built-in player instead of
+ * showing the hint: the page video pauses and the player takes the whole screen.
  */
 class PageVideoHintController(private val host: Host) {
     interface Host {
         /** Hints are on (the setting) */
         val hintsAllowed: Boolean
+        /** Long videos start in the built-in player by themselves (the setting and the player of the site) */
+        val autoPlayerAllowed: Boolean
         fun showHint()
         /** The plate fades out (in [FADE_MS]) after its time, else it goes at once */
         fun hideHint(fade: Boolean)
         /** Back on the plate: the Videos panel with the focus on the [video] */
         fun openVideos(video: PageVideo)
+        /** The rules give the video to the built-in player, from [position] seconds */
+        fun openInPlayer(video: PageVideo, position: Double)
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -53,7 +61,17 @@ class PageVideoHintController(private val host: Host) {
 
     private val showRunnable = Runnable {
         waiting = false
-        if (canShow()) show()
+        if (!canShow()) return@Runnable
+        val page = page ?: return@Runnable
+        val video = video ?: return@Runnable
+        shownPages += page
+        shownVideos += video.url
+        if (host.autoPlayerAllowed) {
+            val position = media?.positionAt(SystemClock.elapsedRealtime()) ?: 0.0
+            host.openInPlayer(video, position)
+        } else {
+            showHint()
+        }
     }
     private val hideRunnable = Runnable { hide(fade = true) }
     private val fadedRunnable = Runnable { backCallback.isEnabled = false }
@@ -93,7 +111,7 @@ class PageVideoHintController(private val host: Host) {
             handler.removeCallbacks(showRunnable)
         } else if (!waiting) {
             waiting = true
-            handler.postDelayed(showRunnable, STEADY_MS)
+            handler.postDelayed(showRunnable, if (host.autoPlayerAllowed) AUTO_STEADY_MS else STEADY_MS)
         }
     }
 
@@ -101,16 +119,15 @@ class PageVideoHintController(private val host: Host) {
         val page = page ?: return false
         val media = media ?: return false
         val video = video ?: return false
-        if (blocked || page in shownPages || video.url in shownVideos || !media.playing || media.muted || media.fullscreen) return false
+        if (blocked || page in shownPages || video.url in shownVideos || media.drm ||
+            !media.playing || media.muted || media.fullscreen) return false
         val duration = media.duration ?: video.duration
         //live streams have no duration
         if (duration != null && duration < MIN_DURATION) return false
-        return host.hintsAllowed
+        return host.hintsAllowed || host.autoPlayerAllowed
     }
 
-    private fun show() {
-        shownPages += page ?: return
-        shownVideos += video?.url ?: return
+    private fun showHint() {
         isShown = true
         handler.removeCallbacks(fadedRunnable)
         backCallback.isEnabled = true
@@ -140,6 +157,8 @@ class PageVideoHintController(private val host: Host) {
     companion object {
         /** How long the video plays with sound before the hint shows */
         const val STEADY_MS = 3000L
+        /** The same, when the video goes to the built-in player by itself */
+        const val AUTO_STEADY_MS = 1500L
         const val SHOWN_MS = 7000L
         const val FADE_MS = 400L
         /** Seconds: shorter videos are previews and ads */

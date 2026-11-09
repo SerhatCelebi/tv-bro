@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d11">
+<title>TV Bro — Phone remote</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main class="app" id="app">
+    <header class="head">
+        <div class="brand">
+            <span class="status" id="status" title="Connected"></span>
+            <strong>TV Bro</strong>
+            <span class="muted">remote</span>
+        </div>
+        <button class="ghost" id="stopBtn" type="button">Close</button>
+    </header>
+
+    <form class="open" id="openForm" autocomplete="off">
+        <input id="url" type="text" inputmode="url" enterkeyhint="go"
+               autocomplete="off" autocapitalize="none" spellcheck="false"
+               placeholder="Enter an address or search">
+        <button type="submit" class="primary">Open</button>
+    </form>
+
+    <section class="scroll">
+        <button id="scrollUp" class="soft" type="button">↑ Scroll up</button>
+        <button id="scrollDown" class="soft" type="button">↓ Scroll down</button>
+    </section>
+
+    <section class="dpad" aria-label="Direction keys">
+        <button class="key up" data-key="up" type="button" aria-label="Up">▲</button>
+        <div class="middle">
+            <button class="key" data-key="left" type="button" aria-label="Left">◀</button>
+            <button class="key ok" data-key="ok" type="button">OK</button>
+            <button class="key" data-key="right" type="button" aria-label="Right">▶</button>
+        </div>
+        <button class="key down" data-key="down" type="button" aria-label="Down">▼</button>
+    </section>
+
+    <section class="grid" aria-label="Shortcuts">
+        <button class="soft" data-key="back" type="button">‹ Back</button>
+        <button class="soft" data-key="home" type="button">⌂ Home</button>
+        <button class="soft" data-key="reload" type="button">↻ Reload</button>
+        <button class="soft" data-key="playpause" type="button">⏯ Play / Pause</button>
+        <button class="soft" data-seek="left" type="button">⏪ 10 s</button>
+        <button class="soft" data-seek="right" type="button">⏩ 10 s</button>
+    </section>
+
+    <section class="type">
+        <input id="text" type="text" placeholder="Type into the page…" autocomplete="off">
+        <button id="sendText" class="primary" type="button">Send</button>
+    </section>
+
+    <p class="hint">Use the direction keys to move and OK to select. In a video, ◀ / ▶ seek back and forward. Scroll the page with ↑ / ↓.</p>
+</main>
+
+<div class="bye" id="bye" hidden>
+    <strong>Remote closed</strong>
+    <p>Open it again on the TV: ⋮ → Phone remote.</p>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

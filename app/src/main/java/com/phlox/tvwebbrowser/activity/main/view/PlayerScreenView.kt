@@ -123,6 +123,9 @@ class PlayerScreenView @JvmOverloads constructor(
 
     /** The video is the one the page plays: Up gives it back to the page */
     private var pageMedia = false
+    /** The first Up was pressed: a second one within [UP_EXIT_MS] gives the video back to the page */
+    private var upExitPending = false
+    private val upExitReset = Runnable { upExitPending = false }
     /** The title of the tab and its site, for the seek bar */
     private var title: String? = null
     private var site: String? = null
@@ -150,7 +153,8 @@ class PlayerScreenView @JvmOverloads constructor(
         override fun renderOsd(osd: VideoModeController.Osd?) = vb.vOsd.render(osd)
 
         override fun onUpDown(down: Boolean): Boolean {
-            if (down) showSettings() else if (pageMedia) close(Exit.SITE_PLAYER)
+            if (down) showSettings()
+            //Up does not leave the video by itself: Back does, or a second Up within a moment (handled above)
             return true
         }
     }).apply { hint = context.getString(R.string.player_menu_hint) }
@@ -244,7 +248,7 @@ class PlayerScreenView @JvmOverloads constructor(
         this.pageMedia = pageMedia
         this.title = title?.takeIf { it.isNotBlank() } ?: ExternalVideoPlayer.title(video)
         this.site = site?.takeIf { it.isNotEmpty() }
-        keys.upHint = if (pageMedia) context.getString(R.string.site_player) else null
+        keys.upHint = if (pageMedia) context.getString(R.string.player_up_twice_site) else null
         vb.btnBack.setText(if (pageMedia) R.string.player_watch_on_site else R.string.player_back_to_page)
         captionHeight = null
         vb.vOsd.setInfo(this.title, caption(video, null, this.site))
@@ -315,6 +319,8 @@ class PlayerScreenView @JvmOverloads constructor(
     /** Closes the player; the page does with its video what [exit] says */
     fun close(exit: Exit = Exit.CLOSED) {
         if (!isOpen) return
+        removeCallbacks(upExitReset)
+        upExitPending = false
         //where the page goes on with its video (the state is gone with the player)
         val position = if (pageMedia) player.state.value?.media?.positionAt(SystemClock.elapsedRealtime()) else null
         vb.vPanel.close()
@@ -432,6 +438,22 @@ class PlayerScreenView @JvmOverloads constructor(
             if (event.action == KeyEvent.ACTION_UP) enterPictureInPicture()
             return true
         }
+        //one Up no longer leaves the video by accident: the first shows the hint, a second one exits
+        if (pageMedia && event.keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                if (upExitPending) {
+                    upExitPending = false
+                    removeCallbacks(upExitReset)
+                    close(Exit.SITE_PLAYER)
+                } else {
+                    upExitPending = true
+                    removeCallbacks(upExitReset)
+                    postDelayed(upExitReset, UP_EXIT_MS)
+                    keys.showHint()
+                }
+            }
+            return true
+        }
         if (keys.dispatchKeyEvent(event)) return true
         return event.keyCode in SWALLOWED_KEYS
     }
@@ -534,6 +556,9 @@ class PlayerScreenView @JvmOverloads constructor(
     }
 
     companion object {
+        /** Milliseconds within which a second Up gives the video back to the page */
+        private const val UP_EXIT_MS = 4000L
+
         /** The activity a (themed) context of a view belongs to */
         private fun activityOf(context: Context): Activity {
             var c = context

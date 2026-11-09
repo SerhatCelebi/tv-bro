@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+The TV screen of the phone remote: a QR code and local URL, plus Stop. The phone page is served
+from assets/phone by PhoneRemoteServer. Back or Stop ends the server.
+-->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:parentTag="android.widget.LinearLayout"
+    tools:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="@dimen/ds_space_screen_x"
+        android:paddingEnd="@dimen/ds_space_screen_x"
+        android:paddingTop="@dimen/ds_space_screen_top"
+        android:paddingBottom="@dimen/ds_downloads_screen_header_padding_bottom"
+        android:background="?attr/tbColorDsBgChrome">
+
+        <ImageButton
+            style="@style/Widget.TVBro.ImageButton.Ds.Standalone"
+            android:id="@+id/ibBack"
+            android:src="@drawable/ic_back"
+            android:contentDescription="@string/back_to_browser" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/ds_space_gutter"
+            android:textSize="@dimen/ds_text_downloads_title"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="?attr/tbColorDsInk"
+            android:singleLine="true"
+            android:text="@string/phone_remote_title" />
+    </LinearLayout>
+
+    <View style="@style/Widget.TVBro.MenuSeparator" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:padding="@dimen/ds_sync_padding">
+
+        <LinearLayout
+            android:layout_width="@dimen/ds_sync_qr_column_width"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <FrameLayout
+                android:layout_width="@dimen/ds_sync_qr_size"
+                android:layout_height="@dimen/ds_sync_qr_size">
+
+                <ImageView
+                    android:id="@+id/ivQr"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:importantForAccessibility="no" />
+
+                <ProgressBar
+                    android:id="@+id/pbQr"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center" />
+            </FrameLayout>
+
+            <TextView
+                style="@style/Widget.TVBro.Text.MenuItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/ds_sync_padding"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="?attr/tbColorDsInk"
+                android:textSize="@dimen/ds_text_address"
+                android:text="@string/phone_remote_scan" />
+
+            <TextView
+                style="@style/Widget.TVBro.Text.MenuItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/ds_sync_text_gap"
+                android:textColor="?attr/tbColorDsInk"
+                android:text="@string/phone_remote_instructions" />
+
+            <TextView
+                android:id="@+id/tvUrl"
+                style="@style/Widget.TVBro.Text.MenuCaption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/ds_sync_text_gap"
+                android:textColor="?attr/tbColorDsInkFaint"
+                android:textIsSelectable="false"
+                tools:text="http://192.168.0.120:41234/?t=..." />
+
+            <TextView
+                android:id="@+id/tvNetwork"
+                style="@style/Widget.TVBro.Text.MenuCaption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/ds_sync_text_gap"
+                android:textColor="?attr/tbColorDsInkFaint"
+                tools:text="The phone must be on the same network as the TV." />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="@dimen/ds_sync_column_gap"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.TVBro.Text.MenuItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="?attr/tbColorDsInk"
+                android:textSize="@dimen/ds_text_address"
+                android:text="@string/phone_remote_what" />
+
+            <TextView
+                style="@style/Widget.TVBro.Text.MenuItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/ds_sync_text_gap"
+                android:textColor="?attr/tbColorDsInk"
+                android:text="@string/phone_remote_features" />
+
+            <Button
+                style="@style/Widget.TVBro.Button"
+                android:id="@+id/btnStop"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/ds_size_chrome_control"
+                android:layout_marginTop="@dimen/ds_sync_padding"
+                android:text="@string/phone_remote_stop" />
+        </LinearLayout>
+    </LinearLayout>
+</merge>

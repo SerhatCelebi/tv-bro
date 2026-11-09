@@ -28,6 +28,7 @@ class Config(val prefs: SharedPreferences, private val credentialsPrefs: SharedP
         const val KEEP_SCREEN_ON_KEY = "keep_screen_on"
         const val MATCH_FRAME_RATE_KEY = "match_frame_rate"
         const val PAGE_VIDEO_HINT_KEY = "page_video_hint"
+        const val AUTO_VIDEO_PLAYER_KEY = "auto_video_player"
         /** When true, analog stick / hat axes from generic motion events are not translated to DPAD keys. */
         const val DISABLE_MOTION_AXES_DPAD_NAVIGATION_KEY = "disable_motion_axes_dpad_navigation"
         /** Percent of built-in default (100 = default). Range [CURSOR_PHYSICS_PERCENT_MIN], [CURSOR_PHYSICS_PERCENT_MAX]. */
@@ -168,6 +169,16 @@ class Config(val prefs: SharedPreferences, private val credentialsPrefs: SharedP
         get() = prefs.getBoolean(PAGE_VIDEO_HINT_KEY, true)
         set(value) {
             prefs.edit().putBoolean(PAGE_VIDEO_HINT_KEY, value).apply()
+        }
+
+    /**
+     * A long video that starts to play in the page goes to the built-in player by itself, fullscreen, also when
+     * the page did not put it in fullscreen. The page media pauses meanwhile.
+     */
+    var autoVideoPlayer: Boolean
+        get() = prefs.getBoolean(AUTO_VIDEO_PLAYER_KEY, true)
+        set(value) {
+            prefs.edit().putBoolean(AUTO_VIDEO_PLAYER_KEY, value).apply()
         }
 
     var disableMotionAxesDpadNavigation: Boolean

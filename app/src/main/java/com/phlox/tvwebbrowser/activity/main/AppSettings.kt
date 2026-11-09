@@ -224,6 +224,7 @@ class AppSettingsStore(
             config.matchFrameRate = value
         }
     override var pageVideoHint: Boolean by config::pageVideoHint
+    override var autoVideoPlayer: Boolean by config::autoVideoPlayer
     override var builtInPlayerByDefault: Boolean
         get() = config.builtInPlayerByDefault
         set(value) {

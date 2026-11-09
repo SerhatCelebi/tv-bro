@@ -17,6 +17,7 @@ import android.view.KeyEvent
 import android.os.SystemClock
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import android.view.inputmethod.InputMethodManager
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.view.animation.DecelerateInterpolator
@@ -51,6 +52,8 @@ import com.phlox.tvwebbrowser.databinding.ActivityMainBinding
 import com.phlox.tvwebbrowser.model.BrowserTab
 import com.phlox.tvwebbrowser.model.Download
 import com.phlox.tvwebbrowser.model.PairedDevice
+import com.phlox.tvwebbrowser.phone.PhoneRemoteServer
+import com.phlox.tvwebbrowser.phone.PhoneRemoteView
 import com.phlox.tvwebbrowser.sync.BookmarksBackup
 import com.phlox.tvwebbrowser.sync.BookmarksReplacer
 import com.phlox.tvwebbrowser.sync.LocalBookmarks
@@ -84,6 +87,8 @@ import com.phlox.tvwebbrowser.widgets.cursor.CursorDrawerDelegate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.net.URLEncoder
 
 /**
  * The TV look: the bar above the page (its row of buttons and the address, and the tabs; opened and
@@ -92,6 +97,8 @@ import kotlinx.coroutines.launch
 class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Callback {
     companion object {
         private val TAG = TvShell::class.java.simpleName
+        /** How long a direction key of the phone remote is held: the cursor moves while it is held */
+        private const val PHONE_DIRECTION_HOLD_MS = 220L
     }
 
     private val activity = host.activity
@@ -102,6 +109,34 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
     private val lifecycleScope = activity.lifecycleScope
     private val uiHandler = Handler(Looper.getMainLooper())
     private val vb = ActivityMainBinding.inflate(activity.layoutInflater)
+
+    private val phoneRemoteServer by lazy {
+        PhoneRemoteServer(activity, object : PhoneRemoteServer.Host {
+            override fun openUrl(url: String) {
+                activity.runOnUiThread {
+                    vb.vPhoneRemote.hideViewOnly()
+                    host.navigate(normalizePhoneUrl(url))
+                }
+            }
+
+            override fun sendKey(key: String) {
+                activity.runOnUiThread { sendPhoneKey(key) }
+            }
+
+            override fun sendText(text: String) {
+                activity.runOnUiThread { sendPhoneText(text) }
+            }
+
+            override fun scroll(dy: Int) {
+                activity.runOnUiThread {
+                    controller.currentTab.value?.webEngine?.getView()?.scrollBy(0, dy)
+                }
+            }
+        })
+    }
+
+    /** The release of a direction key held by the phone remote (the cursor moves while it is held) */
+    private var phoneDirectionRelease: Runnable? = null
 
     override val root: View get() = vb.root
     override val tabsContainer: ViewGroup get() = vb.flWebViewContainer
@@ -295,7 +330,8 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
 
     /** The [video] is the one the media of the page plays (by address: the list may tell more about it than its frame) */
     private fun isPageMedia(video: PageVideo): Boolean =
-        video.url == mediaVideo?.url || mediaVideoChoices.any { it.url == video.url }
+        video.url == mediaVideo?.url || mediaVideoChoices.any { it.url == video.url } ||
+            video.url == media?.source
 
     /** The engine of the shown tab, if it has one yet (back from the picture-in-picture window to a new activity) */
     private val currentEngine get() = controller.currentTab.value?.takeIf { it.isWebEngineCreated }?.webEngine
@@ -318,11 +354,26 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
     /** The bar closes and the page pauses its media before the player shows */
     private fun coverPageWithPlayer() {
         vb.vVideosPanel.hide()
+        vb.vPhoneRemote.hideViewOnly()
         hideMenuOverlay()
         //the keys and the seek bar are the player's: before the pause, which would show the bar of the page
         videoMode.suspended = true
         playerChoice.playerOpen = true
         currentEngine?.mediaPlayback?.pausePlayback()
+        pauseOtherTabsMedia()
+    }
+
+    /** Only the video of the player goes on: the media of the other tabs pauses too */
+    private fun pauseOtherTabsMedia() {
+        val current = controller.currentTab.value ?: return
+        for (tab in controller.tabsStates) {
+            if (tab === current || !tab.isWebEngineCreated) continue
+            try {
+                tab.webEngine.mediaPlayback?.pausePlayback()
+            } catch (_: Exception) {
+                //a tab whose engine is going away; nothing to pause
+            }
+        }
     }
 
     override fun showPictureInPicturePlayer(): Boolean {
@@ -491,7 +542,7 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
         val items = listOf(
             PopupMenuView.Item(R.drawable.ic_search, activity.getString(R.string.find_in_page)) { showFindInPage() },
             PopupMenuView.Item(R.drawable.ic_history, activity.getString(R.string.history)) { showHistory() },
-            PopupMenuView.Item(R.drawable.ic_phone, activity.getString(R.string.sync_phone_sync)) { showPhoneSync() },
+            PopupMenuView.Item(R.drawable.ic_phone, activity.getString(R.string.phone_remote)) { showPhoneRemote() },
             PopupMenuView.Item(R.drawable.ic_settings, activity.getString(R.string.settings)) { showSettings() }
         )
         vb.vPopupMenu.show(vb.vActionBar.moreButton, items, alignEnd = true, endAlignTo = vb.vActionBar.functionsGroup,
@@ -675,6 +726,9 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
         override val hintsAllowed: Boolean
             get() = AppContext.provideConfig().pageVideoHint
 
+        override val autoPlayerAllowed: Boolean
+            get() = AppContext.provideConfig().autoVideoPlayer && playerChoice.builtInPlayerPreferred
+
         override fun showHint() = vb.vPageVideoHint.appear()
 
         override fun hideHint(fade: Boolean) = vb.vPageVideoHint.disappear(fade)
@@ -685,13 +739,17 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
                 vb.vVideosPanel.show(vb.vActionBar.videosButton, vb.vActionBar.functionsGroup, focusUrl = video.url)
             }
         }
+
+        /** The video goes fullscreen in the built-in player by itself: the page media pauses */
+        override fun openInPlayer(video: PageVideo, position: Double) =
+            openBuiltInPlayer(video, position, pageMedia = true, auto = true)
     })
 
     /** Something covers the page (the hint waits): the bar, a panel, menu or screen, the player, fullscreen */
     private fun isPageCovered(): Boolean = fullscreen || vb.rlActionBar.isVisible ||
             !activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) ||
             listOf(vb.vFindBar, vb.vSitePanel, vb.vTabMenu, vb.vPopupMenu, vb.vBookmarksPanel, vb.vDownloadsPanel, vb.vVideosPanel,
-                vb.vDownloadsScreen, vb.vHistoryScreen, vb.vSyncScreen, vb.vSettingsScreen, vb.vPlayerScreen, vb.vVideoChoice,
+                vb.vDownloadsScreen, vb.vHistoryScreen, vb.vSyncScreen, vb.vPhoneRemote, vb.vSettingsScreen, vb.vPlayerScreen, vb.vVideoChoice,
                 vb.vCursorMenu, vb.progressBarGeneric).any { it.isVisible }
 
     private fun updatePageCovered() = pageVideoHint.setBlocked(isPageCovered())
@@ -846,6 +904,111 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
                 Manifest.permission.ACCESS_LOCAL_NETWORK) != PackageManager.PERMISSION_GRANTED) {
             activity.launchForResult(ActivityResultContracts.RequestPermission(), Manifest.permission.ACCESS_LOCAL_NETWORK) {}
         }
+    }
+
+    private fun showPhoneRemote() {
+        vb.vPopupMenu.hide()
+        hideMenuOverlay()
+        hideTvKeyboard()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN && ContextCompat.checkSelfPermission(activity,
+                Manifest.permission.ACCESS_LOCAL_NETWORK) != PackageManager.PERMISSION_GRANTED) {
+            activity.launchForResult(ActivityResultContracts.RequestPermission(), Manifest.permission.ACCESS_LOCAL_NETWORK) {}
+        }
+        val url = phoneRemoteServer.start()
+        if (url == null) {
+            showMessage(R.drawable.ic_phone, activity.getString(R.string.phone_remote_unavailable))
+            return
+        }
+        vb.vPhoneRemote.show(url)
+    }
+
+    private fun sendPhoneKey(key: String) {
+        val engine = controller.currentTab.value?.webEngine
+        val cursor = engine?.virtualCursor
+        //a text field that was focused may leave the cursor off; the phone remote turns it on again
+        if (cursor != null && !cursor.isVirtualCursorMode() && !cursorModes.directNavigation) {
+            cursor.setVirtualCursorMode(true)
+        }
+        val delegate = cursor?.getCursorDrawerDelegate()
+        val direction = when (key) {
+            "up" -> 0f to -1f
+            "down" -> 0f to 1f
+            "left" -> -1f to 0f
+            "right" -> 1f to 0f
+            else -> null
+        }
+        if (direction != null) {
+            hideTvKeyboard()
+            if (!isPageCovered() && cursor != null && delegate != null && cursor.isVirtualCursorMode()) {
+                //the cursor moves while a direction is held; a tap holds it for a moment
+                phoneDirectionRelease?.let { uiHandler.removeCallbacks(it) }
+                delegate.setDirection(direction.first, direction.second)
+                val release = Runnable {
+                    delegate.setDirection(0f, 0f)
+                    phoneDirectionRelease = null
+                }
+                phoneDirectionRelease = release
+                uiHandler.postDelayed(release, PHONE_DIRECTION_HOLD_MS)
+            } else {
+                val code = when (key) {
+                    "up" -> KeyEvent.KEYCODE_DPAD_UP
+                    "down" -> KeyEvent.KEYCODE_DPAD_DOWN
+                    "left" -> KeyEvent.KEYCODE_DPAD_LEFT
+                    else -> KeyEvent.KEYCODE_DPAD_RIGHT
+                }
+                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
+                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
+            }
+            return
+        }
+        if (key == "ok") {
+            hideTvKeyboard()
+            if (!isPageCovered() && cursor != null && delegate != null && cursor.isVirtualCursorMode()) {
+                //the cursor may be hidden after a while; show it where it is, then click
+                cursor.moveCursorTo(delegate.cursorPosition.x, delegate.cursorPosition.y)
+                delegate.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+                delegate.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
+            } else {
+                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
+            }
+            return
+        }
+        val code = when (key) {
+            "back" -> KeyEvent.KEYCODE_BACK
+            "playpause" -> KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+            else -> null
+        }
+        if (code != null) {
+            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
+            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
+            return
+        }
+        when (key) {
+            "home" -> host.navigate(Config.HOME_PAGE_URL)
+            "reload" -> controller.reload()
+        }
+    }
+
+    private fun hideTvKeyboard() {
+        val imm = activity.getSystemService(InputMethodManager::class.java) ?: return
+        imm.hideSoftInputFromWindow(activity.currentFocus?.windowToken ?: activity.window.decorView.windowToken, 0)
+        imm.hideSoftInputFromWindow(activity.window.decorView.windowToken, 0)
+    }
+
+    private fun sendPhoneText(text: String) {
+        if (text.isEmpty()) return
+        val quoted = JSONObject.quote(text)
+        controller.currentTab.value?.webEngine?.evaluateJavascript(
+            """(function(t){var e=document.activeElement;if(!e)return false;if('value' in e){e.value=t;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true}if(e.isContentEditable){e.textContent=t;e.dispatchEvent(new Event('input',{bubbles:true}));return true}return false})($quoted)"""
+        )
+    }
+
+    private fun normalizePhoneUrl(raw: String): String {
+        val value = raw.trim()
+        if (value.startsWith("http://") || value.startsWith("https://")) return value
+        if (!value.contains(' ') && value.contains('.')) return "https://$value"
+        return "https://www.google.com/search?q=" + URLEncoder.encode(value, "UTF-8")
     }
 
     private val syncScreenCallback = object : TvSyncScreenView.Callback {
@@ -1022,8 +1185,8 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
 
     override fun showFindInPage() {
         //not over the screens, the player or a fullscreen video
-        if (fullscreen || listOf(vb.vDownloadsScreen, vb.vHistoryScreen, vb.vSyncScreen, vb.vSettingsScreen,
-                vb.vPlayerScreen).any { it.isVisible }) return
+        if (fullscreen || listOf(vb.vDownloadsScreen, vb.vHistoryScreen, vb.vSyncScreen, vb.vPhoneRemote,
+                vb.vSettingsScreen, vb.vPlayerScreen).any { it.isVisible }) return
         if (!findInPage.open()) return
         //the bar closes first: the field gets the focus when the page is shown
         if (vb.rlActionBar.isVisible) hideMenuOverlay() else vb.vFindBar.focusField()
@@ -1051,9 +1214,35 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
         vb.vDownloadsScreen.attach(lifecycleScope, vb.vPopupMenu, downloadsCallback, ::onDownloadsScreenClosed)
         vb.vHistoryScreen.attach(lifecycleScope, vb.vPopupMenu, historyCallback, ::onHistoryScreenClosed)
         vb.vSyncScreen.attach(lifecycleScope, syncScreenCallback)
+        vb.vPhoneRemote.attach(object : PhoneRemoteView.Callback {
+            override fun onStop() = phoneRemoteServer.stop()
+            override fun onClosed() {
+                if (vb.rlActionBar.isVisible) {
+                    vb.vActionBar.moreButton.requestFocus()
+                } else {
+                    controller.currentTab.value?.webEngine?.getView()?.requestFocus()
+                }
+            }
+        })
+        phoneRemoteServer.onPageServed = {
+            activity.runOnUiThread {
+                if (vb.vPhoneRemote.isOpen) {
+                    if (vb.rlActionBar.isVisible) hideMenuOverlay()
+                    vb.vPhoneRemote.hideViewOnly()
+                    controller.currentTab.value?.webEngine?.getView()?.requestFocus()
+                }
+            }
+        }
+        phoneRemoteServer.onStopped = {
+            activity.runOnUiThread {
+                vb.vPhoneRemote.hideViewOnly()
+                controller.currentTab.value?.webEngine?.getView()?.requestFocus()
+            }
+        }
         vb.vSettingsScreen.attach(lifecycleScope, vb.vPopupMenu, settingsCallback, ::onSettingsClosed)
         activity.lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStart(owner: LifecycleOwner) = syncServer.start()
+            //the TV Bro phone sync is not part of this app: the phone remote replaces it
+            override fun onStart(owner: LifecycleOwner) = Unit
             override fun onPause(owner: LifecycleOwner) {
                 vb.vPlayerScreen.onPause()
                 pageVideoHint.setBlocked(true)
@@ -1062,9 +1251,14 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
                 vb.vPlayerScreen.onResume()
                 updatePageCovered()
             }
-            override fun onStop(owner: LifecycleOwner) = syncServer.stop()
+            override fun onStop(owner: LifecycleOwner) {
+                syncServer.stop()
+                phoneRemoteServer.stop()
+                vb.vPhoneRemote.hideViewOnly()
+            }
             override fun onDestroy(owner: LifecycleOwner) {
                 syncServer.destroy()
+                phoneRemoteServer.stop()
                 vb.vPlayerScreen.close()
             }
         })
@@ -1320,6 +1514,7 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
         dispatcher.addCallback(activity, vb.vDownloadsScreen.backCallback)
         dispatcher.addCallback(activity, vb.vHistoryScreen.backCallback)
         dispatcher.addCallback(activity, vb.vSyncScreen.backCallback)
+        dispatcher.addCallback(activity, vb.vPhoneRemote.backCallback)
         dispatcher.addCallback(activity, vb.vSettingsScreen.backCallback)
         dispatcher.addCallback(activity, vb.vDownloadsPanel.backCallback)
         dispatcher.addCallback(activity, vb.vVideosPanel.backCallback)

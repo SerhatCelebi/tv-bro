@@ -283,6 +283,11 @@ class VideoModeController(private val host: Host) {
         handler.postDelayed(updateRunnable, next - now)
     }
 
+    /** Shows the seek bar with its hints for a while (a key that has no bar of its own) */
+    fun showHint() {
+        if (isActive) showOsd(HINT_SHOWN_MS)
+    }
+
     companion object {
         /** Seconds of a press of Left or Right */
         const val STEP = 10.0

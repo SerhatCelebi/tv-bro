@@ -271,6 +271,14 @@
         android:outlineProvider="none"
         android:theme="@style/ThemeOverlay.TVBro.Video" />
 
+    <!-- the local phone remote: QR, URL and Stop; above the player and the video choice -->
+    <com.phlox.tvwebbrowser.phone.PhoneRemoteView
+        android:id="@+id/vPhoneRemote"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="18dp"
+        android:outlineProvider="none" />
+
     <ProgressBar
         android:id="@+id/progressBarGeneric"
         style="?android:attr/progressBarStyleLarge"

@@ -47,7 +47,7 @@ class SettingsNavigator(
     enum class Key {
         SEARCH_ENGINE, SEARCH_URL, HOME_PAGE, HOME_PAGE_URL, HOME_PAGE_LINKS, HOME_PAGE_BOOKMARKS_FOLDER,
         CHANNEL_BOOKMARKS, CHANNEL_BOOKMARKS_SOURCE, CHANNEL_TABS, CHANNEL_DOWNLOADS,
-        SITE_VIEW, USER_AGENT, USER_AGENT_STRING, AUTOPLAY, AD_BLOCK, TRACKING_PROTECTION, FILTER_LIST, REGIONAL_LIST, CUSTOM_LIST, UPDATE_LISTS, VIDEO_PLAYER, VIDEO_HINT,
+        SITE_VIEW, USER_AGENT, USER_AGENT_STRING, AUTOPLAY, AD_BLOCK, TRACKING_PROTECTION, FILTER_LIST, REGIONAL_LIST, CUSTOM_LIST, UPDATE_LISTS, VIDEO_PLAYER, VIDEO_HINT, AUTO_VIDEO_PLAYER,
         INTERFACE, THEME, DARKENING, KEEP_SCREEN_ON, MATCH_FRAME_RATE,
         CURSOR_SPEED, CURSOR_ACCELERATION, JOYSTICK, SHORTCUT,
         CLEAR_CACHE, ENGINE_DEBUG, DOWNLOAD_FOLDER, PROXY, PROXY_TYPE, PROXY_HOST, PROXY_PORT, PROXY_USERNAME, PROXY_PASSWORD,
@@ -133,6 +133,8 @@ class SettingsNavigator(
         var builtInPlayerByDefault: Boolean
         /** A hint about a found video that starts to play in the page (TV only) */
         var pageVideoHint: Boolean
+        /** A long video that starts to play in the page opens fullscreen in the built-in player (TV only) */
+        var autoVideoPlayer: Boolean
 
         var interfaceMode: Config.InterfaceMode
         var theme: Config.Theme
@@ -555,6 +557,7 @@ class SettingsNavigator(
             Key.AD_BLOCK -> store.adBlockEnabled = !store.adBlockEnabled
             Key.TRACKING_PROTECTION -> store.trackingProtection = !store.trackingProtection
             Key.VIDEO_HINT -> store.pageVideoHint = !store.pageVideoHint
+            Key.AUTO_VIDEO_PLAYER -> store.autoVideoPlayer = !store.autoVideoPlayer
             Key.DARKENING -> store.darkening = !store.darkening
             Key.KEEP_SCREEN_ON -> store.keepScreenOn = !store.keepScreenOn
             Key.MATCH_FRAME_RATE -> store.matchFrameRate = !store.matchFrameRate
@@ -930,6 +933,8 @@ class SettingsNavigator(
                 Row.Choice(Key.VIDEO_PLAYER, string(R.string.settings_video_player), string(R.string.settings_video_player_summary),
                     listOf(string(R.string.built_in_player), string(R.string.site_player)),
                     if (store.builtInPlayerByDefault) VIDEO_PLAYER_BUILT_IN else VIDEO_PLAYER_SITE, segmented = true),
+                Row.Toggle(Key.AUTO_VIDEO_PLAYER, string(R.string.settings_auto_video_player),
+                    string(R.string.settings_auto_video_player_summary), store.autoVideoPlayer),
                 Row.Toggle(Key.VIDEO_HINT, string(R.string.settings_video_hint), string(R.string.settings_video_hint_summary),
                     store.pageVideoHint)))
         }

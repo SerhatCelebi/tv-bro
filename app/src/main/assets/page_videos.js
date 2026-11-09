@@ -14,6 +14,9 @@
 function tvBroWatchPageVideos(send, frames) {
     var MAX = 50;
     var STREAM_TYPES = /^(application|audio)\/(vnd\.apple\.mpegurl|x-mpegurl|mpegurl|dash\+xml)$/i;
+    var VIDEO_TYPES = /^video\//i;
+    var VIDEO_EXT = /\.(mp4|m4v|webm|mkv|mov|ogv|avi|flv|3gp)$/i;
+    var IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif|bmp|svg|ico)$/i;
     var found = {};
     var order = [];
     var subtitles = [];
@@ -24,6 +27,8 @@ function tvBroWatchPageVideos(send, frames) {
 
     function add(url, element, info, type) {
         if (!url || !/^https?:/i.test(url)) return;
+        //posters and other images that a video element loads are not videos
+        if (IMAGE_EXT.test(url.split(/[?#]/)[0].toLowerCase())) return;
         var known = found[url];
         var changed = false;
         if (!known) {
@@ -178,7 +183,6 @@ function tvBroWatchPageVideos(send, frames) {
 
     function updateSubtitles() {
         var list = [];
-        var lastLoaded = loadedSubtitles[loadedSubtitles.length - 1];
         function put(s) {
             if (list.length >= MAX) return;
             var known = list.filter(function(k) { return k.url == s.url; })[0];
@@ -186,8 +190,8 @@ function tvBroWatchPageVideos(send, frames) {
                 known.label = known.label || s.label;
                 return;
             }
-            list.push({url: s.url, lang: s.lang || null, label: s.label || null,
-                showing: !!s.showing || s.url == lastLoaded});
+            //a loaded file is not shown by itself: the user chooses it in the player, unless the page says it is
+            list.push({url: s.url, lang: s.lang || null, label: s.label || null, showing: !!s.showing});
         }
         trackSubtitles.forEach(put);
         apiSubtitles.forEach(put);
@@ -256,7 +260,9 @@ function tvBroWatchPageVideos(send, frames) {
                 (entry.initiatorType == 'fetch' || entry.initiatorType == 'xmlhttprequest')) {
             // maybe the manifest of a DASH stream without its extension and type (player-venom): the app reads it
             add(entry.name, false, null, type.toLowerCase());
-        } else if (entry.initiatorType == 'video') {
+        } else if (entry.initiatorType == 'video' &&
+                (VIDEO_TYPES.test(type || '') || VIDEO_EXT.test(path))) {
+            //what a media element loaded: a video file, not its poster or another image
             add(entry.name, true, null);
         } else if (isSubtitleFile(entry.name, path) && /^https?:/i.test(entry.name)) {
             loadedSubtitles = loadedSubtitles.filter(function(url) { return url != entry.name; });
