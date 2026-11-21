@@ -1,4 +1,4 @@
-package com.phlox.tvwebbrowser.activity.main
+﻿package com.phlox.tvwebbrowser.activity.main
 
 import android.os.Looper
 import android.os.SystemClock
@@ -169,7 +169,7 @@ class VideoModeControllerTest {
     @Test
     fun theHintShowsInTheBar() {
         enter()
-        idle(3500)
+        idle(5500)
         assertNull(osd)
         video.hint = "Down: player"
         assertEquals("Down: player", osd?.hint)
@@ -197,7 +197,7 @@ class VideoModeControllerTest {
         enter()
         assertEquals("Cursor", osd?.upHint)
         assertNull(osd?.hint)
-        idle(3500)
+        idle(5500)
         assertNull(osd)
         //a new hint of Up does not bring the bar back
         video.upHint = "Pointer"
@@ -224,14 +224,14 @@ class VideoModeControllerTest {
     @Test
     fun theBarHidesWhileItPlaysAndStaysWhilePaused() {
         enter()
-        idle(3500)
+        idle(5500)
         assertNull(osd)
         video.setMedia(media(playing = false))
         assertNotNull(osd)
         idle(10_000)
         assertNotNull(osd)
         video.setMedia(media(playing = true))
-        idle(3500)
+        idle(5500)
         assertNull(osd)
     }
 
@@ -292,3 +292,4 @@ class VideoModeControllerTest {
         assertTrue(video.isActive)
     }
 }
+

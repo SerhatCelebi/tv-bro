@@ -1,6 +1,7 @@
 package com.phlox.tvwebbrowser.activity.main
 
 import android.os.Looper
+import com.phlox.tvwebbrowser.activity.main.PageVideoHintController.Companion.AUTO_STEADY_MS
 import com.phlox.tvwebbrowser.activity.main.PageVideoHintController.Companion.FADE_MS
 import com.phlox.tvwebbrowser.activity.main.PageVideoHintController.Companion.SHOWN_MS
 import com.phlox.tvwebbrowser.activity.main.PageVideoHintController.Companion.STEADY_MS
@@ -19,11 +20,14 @@ import java.time.Duration
 class PageVideoHintControllerTest {
     private val calls = mutableListOf<String>()
     private var allowed = true
+    private var autoPlayer = false
     private val hint = PageVideoHintController(object : PageVideoHintController.Host {
         override val hintsAllowed get() = allowed
+        override val autoPlayerAllowed get() = autoPlayer
         override fun showHint() { calls += "show" }
         override fun hideHint(fade: Boolean) { calls += if (fade) "fade" else "hide" }
         override fun openVideos(video: PageVideo) { calls += "open ${video.url}" }
+        override fun openInPlayer(video: PageVideo, position: Double) { calls += "player ${video.url}" }
     })
 
     private val video = PageVideo("https://cdn.example.com/episode.m3u8", PageVideo.Kind.HLS)
@@ -58,6 +62,17 @@ class PageVideoHintControllerTest {
         assertTrue(hint.backCallback.isEnabled)
         idle(FADE_MS)
         assertFalse(hint.backCallback.isEnabled)
+    }
+
+    @Test
+    fun theAutomaticPlayerOpensTheVideoInsteadOfTheHint() {
+        autoPlayer = true
+        play()
+        idle(AUTO_STEADY_MS - 100)
+        assertEquals(emptyList<String>(), calls)
+        idle(100)
+        assertEquals(listOf("player ${video.url}"), calls)
+        assertFalse(hint.isShown)
     }
 
     @Test

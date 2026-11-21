@@ -55,6 +55,7 @@ class SettingsNavigatorTest {
         override var defaultDesktopView: Boolean? = null
         override var userAgent: String? = null
         override var allowAutoplayMedia = false
+        override var autoVideoPlayer = false
         override var adBlockEnabled = true
         override var supportsTrackingProtection = false
         override var trackingProtection = true
