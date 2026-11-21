@@ -281,7 +281,7 @@
     <string name="video_osd_cursor">Cursor</string>
     <!-- the player of the page (on the seek bar of the built-in player, after the key cap of Up: back to it) -->
     <string name="site_player">Site player</string>
-    <string name="player_up_twice_site">↑ twice: site player</string>
+    <string name="player_up_twice_site">Twice: site player</string>
     <!-- a toast at the top when the built-in player opens, its first few times -->
     <string name="player_opened">Video opened in TV Bro player: smoother and in the full resolution of the screen</string>
     <!-- a toast when the built-in player that opened by itself could not start: the page plays the video on -->
@@ -627,7 +627,7 @@
     <string name="settings_video_hint">Hint about videos found on the page</string>
     <string name="settings_video_hint_summary">When such a video starts to play on the page, a short note tells that TV Bro player can play it</string>
     <string name="settings_auto_video_player">Open videos fullscreen in TV Bro player</string>
-    <string name="settings_auto_video_player_summary">Long videos start in the TV Bro player by themselves, also when the page does not open them fullscreen. The page video pauses meanwhile.</string>
+    <string name="settings_auto_video_player_summary">Long videos open in the TV Bro player automatically, even when the page does not open them fullscreen. The page video pauses while this happens.</string>
     <string name="settings_group_ad_blocking">Ad blocking</string>
     <string name="settings_block_ads">Block ads</string>
     <string name="settings_block_ads_summary_tv">Each site can turn it off in its site panel</string>
@@ -739,9 +739,9 @@
     <string name="phone_remote">Phone remote</string>
     <string name="phone_remote_title">Phone remote</string>
     <string name="phone_remote_scan">Scan with your phone</string>
-    <string name="phone_remote_instructions">Open the link in any browser on the same Wi-Fi. No app is needed.</string>
+    <string name="phone_remote_instructions">Scan the code with your phone, or type the address into any browser on the same Wi-Fi. No app is needed.</string>
     <string name="phone_remote_what">Use your phone as a remote</string>
-    <string name="phone_remote_features">Type in the address bar, send text to the page, and use the D-pad or the touchpad.</string>
+    <string name="phone_remote_features">Open an address on the TV, send text to a page, and use the D-pad or the scroll buttons.</string>
     <string name="phone_remote_stop">Stop</string>
     <string name="phone_remote_starting">Starting the local server…</string>
     <string name="phone_remote_no_network">No local network address found. Check the Wi-Fi connection.</string>

@@ -15,7 +15,7 @@
 
     const setStatus = (ok) => {
         statusEl.classList.toggle('on', ok);
-        statusEl.title = ok ? 'Bağlı' : 'Bağlantı yok';
+        statusEl.title = ok ? 'Connected' : 'No connection';
     };
 
     async function send(type, data = {}) {
