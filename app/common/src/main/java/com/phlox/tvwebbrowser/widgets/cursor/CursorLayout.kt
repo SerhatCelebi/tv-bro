@@ -6,7 +6,9 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewTreeObserver
 import android.widget.FrameLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.ViewConfigurationCompat
@@ -37,6 +39,33 @@ class CursorLayout @JvmOverloads constructor(context: Context, attrs: AttributeS
             ViewCompat.getRootWindowInsets(rootView)?.isVisible(WindowInsetsCompat.Type.ime()) == true
         },
     )
+
+    /**
+     * The cursor keeps the direction a key held, but the release goes to whatever has the focus then. When the focus
+     * leaves this surface (a panel, a menu, a screen) the movement stops here instead of running away.
+     */
+    private val focusChangeListener = ViewTreeObserver.OnGlobalFocusChangeListener { _, newFocus ->
+        if (!isInSubtree(newFocus)) inputEventsAdapter.resetState()
+    }
+
+    private fun isInSubtree(view: View?): Boolean {
+        var current: View? = view
+        while (current != null) {
+            if (current === this) return true
+            current = current.parent as? View
+        }
+        return false
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        viewTreeObserver.addOnGlobalFocusChangeListener(focusChangeListener)
+    }
+
+    override fun onDetachedFromWindow() {
+        viewTreeObserver.removeOnGlobalFocusChangeListener(focusChangeListener)
+        super.onDetachedFromWindow()
+    }
 
     init {
         init()

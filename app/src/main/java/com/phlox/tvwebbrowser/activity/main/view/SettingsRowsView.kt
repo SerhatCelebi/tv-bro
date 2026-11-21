@@ -110,6 +110,9 @@ class SettingsRowsView @JvmOverloads constructor(
         }
         if (focusedChild != null && focusedChild.isAttachedToWindow) {
             focusedChild.requestFocus()
+        } else if (focusedId != null) {
+            //the row the focus was on is gone (a setting hid it): the first row takes it, not nothing
+            post { firstFocusable()?.requestFocus() }
         }
     }
 

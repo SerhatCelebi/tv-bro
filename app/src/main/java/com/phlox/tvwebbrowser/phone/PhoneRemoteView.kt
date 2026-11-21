@@ -3,6 +3,7 @@ package com.phlox.tvwebbrowser.phone
 import android.content.Context
 import android.net.Uri
 import android.util.AttributeSet
+import android.view.FocusFinder
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.LinearLayout
@@ -67,6 +68,12 @@ class PhoneRemoteView @JvmOverloads constructor(
             context.getString(R.string.sync_same_network, host)
         }
         vb.btnStop.requestFocus()
+    }
+
+    /** The keys move the focus only here: the page behind the QR does not get them */
+    override fun focusSearch(focused: View?, direction: Int): View? {
+        if (!isOpen) return super.focusSearch(focused, direction)
+        return FocusFinder.getInstance().findNextFocus(this, focused, direction) ?: focused
     }
 
     /** Hide the QR but keep the server and the phone session alive (the page is opened) */

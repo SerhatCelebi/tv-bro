@@ -621,6 +621,14 @@ open class MainActivity : AppCompatActivity(), BrowserShell.Host {
         super.onPause()
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        //a dialog, the keyboard or another app may leave the window without a focused view
+        if (hasFocus && ::shell.isInitialized) {
+            window.decorView.post { shell.restoreFocusIfLost() }
+        }
+    }
+
     override fun navigate(url: String) {
         if (controller.currentTab.value == null) {
             //opening a new tab also shows it
@@ -762,6 +770,8 @@ open class MainActivity : AppCompatActivity(), BrowserShell.Host {
         val view = currentFocus ?: root
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(view.windowToken, 0)
+        //the keyboard may have taken the focus: the page gets it back for the next key
+        window.decorView.post { shell.restoreFocusIfLost() }
         return true
     }
 

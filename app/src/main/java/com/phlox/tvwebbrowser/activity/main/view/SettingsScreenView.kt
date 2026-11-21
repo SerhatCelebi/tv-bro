@@ -5,6 +5,7 @@ import android.util.AttributeSet
 import android.view.FocusFinder
 import android.view.LayoutInflater
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -96,6 +97,8 @@ class SettingsScreenView @JvmOverloads constructor(
     fun hide() {
         if (!isOpen) return
         vb.vRows.commitFields()
+        context.getSystemService(InputMethodManager::class.java)
+            ?.hideSoftInputFromWindow(windowToken, 0)
         popupMenu.hide()
         navigator.onHidden()
         visibility = GONE

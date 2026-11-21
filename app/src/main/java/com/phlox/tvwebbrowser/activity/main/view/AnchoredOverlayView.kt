@@ -22,6 +22,8 @@ abstract class AnchoredOverlayView @JvmOverloads constructor(
     protected abstract val panel: View
     protected var anchor: View? = null
         private set
+    /** What had the focus before the panel opened, when the anchor is gone or hidden meanwhile */
+    private var focusBeforeShow: View? = null
 
     val backCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() = onBack()
@@ -42,6 +44,7 @@ abstract class AnchoredOverlayView @JvmOverloads constructor(
      * @param bottomMargin the least space under the panel: a taller panel is cut there
      */
     protected fun showUnder(anchor: View, gap: Int, focus: View, endAlignTo: View? = null, bottomMargin: Int = 0) {
+        if (focusBeforeShow == null) focusBeforeShow = rootView.findFocus()
         this.anchor = anchor
         visibility = VISIBLE
         backCallback.isEnabled = true
@@ -72,7 +75,10 @@ abstract class AnchoredOverlayView @JvmOverloads constructor(
         visibility = GONE
         backCallback.isEnabled = false
         onHidden()
-        anchor?.requestFocus()
+        val target = anchor?.takeIf { it.isAttachedToWindow && it.isShown }
+            ?: focusBeforeShow?.takeIf { it.isAttachedToWindow && it.isShown }
+        focusBeforeShow = null
+        target?.requestFocus()
         anchor = null
     }
 

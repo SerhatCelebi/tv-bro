@@ -323,6 +323,13 @@ class WebViewWebEngine(val tab: BrowserTab) : WebEngine, VirtualCursorSupport, S
 
     override fun onDetachFromWindow(completely: Boolean, destroyTab: Boolean) {
         onPause()
+        //a tab detached while its page was fullscreen would keep the shell in fullscreen: no Back, no bar
+        fullScreenView?.let { full ->
+            cursorLayout?.removeView(full)
+            fullScreenView = null
+            webView?.visibility = View.VISIBLE
+            callback?.onExitFullscreen()
+        }
         cursorLayout?.let { (it.parent as? ViewGroup)?.removeView(it) }
         callback = null
         if (completely) {
@@ -408,6 +415,9 @@ class WebViewWebEngine(val tab: BrowserTab) : WebEngine, VirtualCursorSupport, S
                 addView(view)
             }
             fullScreenView = view
+            //the fullscreen surface takes the keys, so the cursor and the video mode have a focused view
+            if (!view.isFocusable) view.isFocusable = true
+            view.requestFocus()
         }
 
         override fun onHideCustomView() {

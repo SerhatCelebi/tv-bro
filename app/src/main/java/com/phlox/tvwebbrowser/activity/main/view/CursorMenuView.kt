@@ -8,6 +8,7 @@ import android.os.Looper
 import android.util.AttributeSet
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.OvershootInterpolator
@@ -31,6 +32,9 @@ class CursorMenuView @JvmOverloads constructor(
     private var vb: ViewCursorMenuBinding =
         ViewCursorMenuBinding.inflate(LayoutInflater.from(context), this, true)
     private var menuContext: MenuContext? = null
+    /** What had the focus before the menu opened and the page it belongs to: closing gives it back */
+    private var focusBefore: View? = null
+    private var pageView: View? = null
     private var handler = Handler(Looper.getMainLooper())
     private var lastShowTime = 0L
     private var openAnimator: ValueAnimator? = null
@@ -122,6 +126,8 @@ class CursorMenuView @JvmOverloads constructor(
             return
         }
         lastShowTime = now
+        if (focusBefore == null) focusBefore = rootView.findFocus()
+        if (pageView == null) pageView = tab.webEngine.getView()
         this.menuContext = MenuContext(tab, windowProvider, cursorDrawerDelegate,
             baseUri, linkUri, srcUri, title, altText, textContent, x, y)
         visibility = VISIBLE
@@ -158,9 +164,19 @@ class CursorMenuView @JvmOverloads constructor(
         }
     }
 
+    /** The buttons are gone: the page (or what had the focus) takes the keys again, else the cursor looks dead */
+    private fun restoreFocus() {
+        val saved = focusBefore?.takeIf { it.isAttachedToWindow && it.isShown }
+        val page = pageView?.takeIf { it.isAttachedToWindow && it.isShown }
+        focusBefore = null
+        pageView = null
+        (saved ?: page)?.requestFocus()
+    }
+
     /** Hides the menu immediately (no animation). Used before showing a dialog so focus does not re-trigger menu actions. */
     private fun closeWithoutAnimation() {
         Log.d("CursorMenuView", "closeWithoutAnimation")
+        restoreFocus()
         openAnimator?.cancel()
         menuContext = null
         backCallback.isEnabled = false
@@ -173,6 +189,7 @@ class CursorMenuView @JvmOverloads constructor(
 
     fun close(animation: CloseAnimation = CloseAnimation.FADE_OUT) {
         Log.d("CursorMenuView", "close")
+        restoreFocus()
         openAnimator?.cancel()
         menuContext = null
         backCallback.isEnabled = false

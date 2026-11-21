@@ -103,6 +103,9 @@ interface BrowserShell {
     /** Shows a toast at the bottom center of the window: an [icon] and one line */
     fun showMessage(@DrawableRes icon: Int, message: String)
 
+    /** Gives the focus back to something the user can use when the window has it again and no view kept it */
+    fun restoreFocusIfLost() {}
+
     /** The [download] started: the shell tells about it */
     fun onDownloadStarted(download: Download)
 

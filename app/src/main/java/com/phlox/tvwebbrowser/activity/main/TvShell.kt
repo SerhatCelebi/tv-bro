@@ -99,6 +99,10 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
         private val TAG = TvShell::class.java.simpleName
         /** How long a direction key of the phone remote is held: the cursor moves while it is held */
         private const val PHONE_DIRECTION_HOLD_MS = 220L
+
+        /** The keys that move the focus or the cursor */
+        private val DPAD_KEYS = setOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT)
     }
 
     private val activity = host.activity
@@ -115,7 +119,11 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
             override fun openUrl(url: String) {
                 activity.runOnUiThread {
                     vb.vPhoneRemote.hideViewOnly()
+                    //a URL sent from the phone goes to the page, not behind the bar the user left open
+                    if (vb.rlActionBar.isVisible) hideMenuOverlay()
                     host.navigate(normalizePhoneUrl(url))
+                    //the page is shown now: the next key of the remote goes to its cursor again
+                    focusPageSoon()
                 }
             }
 
@@ -624,6 +632,8 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
         playerChoice.builtInPlayerPreferred = controller.prefersBuiltInPlayer(controller.currentTabState.value.host)
         playerChoice.setFullscreen(fullscreen)
         updatePageCovered()
+        //the fullscreen view took the focus and is gone now (the player closed, the page left fullscreen)
+        if (!fullscreen) focusPageSoon()
     }
 
     /** The remote controls the video of the fullscreen view */
@@ -824,6 +834,17 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        //a view that went away may have left the window without focus: the key itself brings the shown thing back
+        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode in DPAD_KEYS) {
+            val focused = activity.currentFocus
+            if (focused == null || !focused.isAttachedToWindow || !focused.isShown) {
+                if (vb.rlActionBar.isVisible) {
+                    vb.vActionBar.catchFocus()
+                } else if (pageCanTakeFocus()) {
+                    focusPage()
+                }
+            }
+        }
         if (vb.vPlayerScreen.dispatchPlayerKey(event)) return true
         //the Menu key (where it reaches the app) does what Down does in the video mode
         if (event.keyCode == KeyEvent.KEYCODE_MENU && videoMode.isActive && playerChoice.down != PlayerChoice.Down.CURSOR) {
@@ -956,8 +977,8 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
                     "left" -> KeyEvent.KEYCODE_DPAD_LEFT
                     else -> KeyEvent.KEYCODE_DPAD_RIGHT
                 }
-                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
-                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
+                dispatchPhoneKey(phoneKeyEvent(KeyEvent.ACTION_DOWN, code))
+                dispatchPhoneKey(phoneKeyEvent(KeyEvent.ACTION_UP, code))
             }
             return
         }
@@ -966,11 +987,11 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
             if (!isPageCovered() && cursor != null && delegate != null && cursor.isVirtualCursorMode()) {
                 //the cursor may be hidden after a while; show it where it is, then click
                 cursor.moveCursorTo(delegate.cursorPosition.x, delegate.cursorPosition.y)
-                delegate.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
-                delegate.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
+                delegate.dispatchKeyEvent(phoneKeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+                delegate.dispatchKeyEvent(phoneKeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
             } else {
-                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
-                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
+                dispatchPhoneKey(phoneKeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+                dispatchPhoneKey(phoneKeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
             }
             return
         }
@@ -980,14 +1001,45 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
             else -> null
         }
         if (code != null) {
-            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
-            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
+            dispatchPhoneKey(phoneKeyEvent(KeyEvent.ACTION_DOWN, code))
+            dispatchPhoneKey(phoneKeyEvent(KeyEvent.ACTION_UP, code))
             return
         }
         when (key) {
             "home" -> host.navigate(Config.HOME_PAGE_URL)
             "reload" -> controller.reload()
         }
+    }
+
+    /**
+     * A key of the phone remote goes through the same path as the one of the remote (the player and the video mode
+     * get it first), then moves the focus itself: a key dispatched by the app does not go through the focus
+     * navigation of the window.
+     */
+    private fun dispatchPhoneKey(event: KeyEvent): Boolean {
+        if (activity.window.callback?.dispatchKeyEvent(event) == true) return true
+        if (event.action != KeyEvent.ACTION_DOWN) return false
+        val direction = when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> View.FOCUS_LEFT
+            KeyEvent.KEYCODE_DPAD_RIGHT -> View.FOCUS_RIGHT
+            KeyEvent.KEYCODE_DPAD_UP -> View.FOCUS_UP
+            KeyEvent.KEYCODE_DPAD_DOWN -> View.FOCUS_DOWN
+            else -> 0
+        }
+        if (direction == 0) return false
+        val focused = activity.currentFocus ?: return false
+        val next = focused.focusSearch(direction) ?: return false
+        if (next === focused) return false
+        return next.requestFocus(direction)
+    }
+
+    /**
+     * A key made by the app: the real times matter, since a key event made with time 0 is not recognized as the
+     * same press as the system Back it may cause (that would go back twice).
+     */
+    private fun phoneKeyEvent(action: Int, code: Int): KeyEvent {
+        val now = SystemClock.uptimeMillis()
+        return KeyEvent(now, now, action, code, 0)
     }
 
     private fun hideTvKeyboard() {
@@ -1183,6 +1235,32 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
         controller.currentTab.value?.webEngine?.getView()?.requestFocus()
     }
 
+    /** Something of the shell covers the page (a panel, a screen, the player, the cursor menu) */
+    private fun overlaysCoverPage(): Boolean = listOf(vb.vFindBar, vb.vSitePanel, vb.vTabMenu, vb.vPopupMenu,
+        vb.vBookmarksPanel, vb.vDownloadsPanel, vb.vVideosPanel, vb.vDownloadsScreen, vb.vHistoryScreen,
+        vb.vSyncScreen, vb.vPhoneRemote, vb.vSettingsScreen, vb.vPlayerScreen, vb.vVideoChoice,
+        vb.vCursorMenu).any { it.isVisible }
+
+    /** The page is shown and nothing of the shell is over it: the D-pad can go to its cursor */
+    private fun pageCanTakeFocus(): Boolean = !fullscreen && !vb.rlActionBar.isVisible &&
+        !vb.progressBarGeneric.isVisible && vb.flWebViewContainer.isVisible && !overlaysCoverPage()
+
+    /** Gives the page the focus when it is shown; posted, so an overlay opening in the same frame keeps its focus */
+    private fun focusPageSoon() {
+        vb.flWebViewContainer.post { if (pageCanTakeFocus()) focusPage() }
+    }
+
+    override fun restoreFocusIfLost() {
+        val focused = activity.currentFocus
+        if (focused != null && focused.isAttachedToWindow && focused.isShown) return
+        //the bar is over the page: its address takes the focus, not the page under it
+        if (vb.rlActionBar.isVisible) {
+            vb.vActionBar.catchFocus()
+            return
+        }
+        focusPageSoon()
+    }
+
     override fun showFindInPage() {
         //not over the screens, the player or a fullscreen video
         if (fullscreen || listOf(vb.vDownloadsScreen, vb.vHistoryScreen, vb.vSyncScreen, vb.vPhoneRemote,
@@ -1296,12 +1374,18 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
         }
     }
 
-    override fun onTabViewCreated(tab: BrowserTab) {}
+    override fun onTabViewCreated(tab: BrowserTab) {
+        //a new view of the current tab (after the renderer died): the page takes the focus when it is shown
+        if (tab === controller.currentTab.value) focusPageSoon()
+    }
 
     override fun onTabsLoaded() {
         val currentTab = controller.currentTab.value
         if (currentTab == null || currentTab.url == settingsModel.homePage) {
             showMenuOverlay()
+        } else {
+            //a restored page starts without a focused view: the first D-pad key would go nowhere
+            focusPageSoon()
         }
     }
 
@@ -1327,6 +1411,8 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
         }
         if (vb.rlActionBar.visibility == View.VISIBLE) {
             hideMenuOverlay()
+        } else {
+            focusPageSoon()
         }
     }
 
@@ -1363,6 +1449,8 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
         playerChoice.setPage(page)
         if (tabChanged) {
             onRenderedTabChanged()
+            //a tab shown by the bar, a link or the phone remote: its page takes the focus
+            focusPageSoon()
         }
         //the address is not touched while the user edits it or browses the tabs list
         //(then the address of the focused tab is shown)
@@ -1498,6 +1586,8 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
             } else {
                 cursor.getCursorDrawerDelegate()?.handleBackNavigation()
             }
+            //the mode was left: the page takes the keys again even if the cursor menu left no focus
+            focusPageSoon()
         }
     }
 
@@ -1560,7 +1650,15 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
                 .setDuration(300)
                 .setInterpolator(DecelerateInterpolator())
                 .withEndAction {
-                    if (onShown != null) onShown() else vb.vActionBar.catchFocus()
+                    if (onShown != null) {
+                        onShown()
+                    } else {
+                        vb.vActionBar.catchFocus()
+                        //the window may have taken the focus meanwhile: the bar takes it back when it is empty
+                        vb.rlActionBar.post {
+                            if (vb.rlActionBar.isVisible && activity.currentFocus == null) vb.vActionBar.catchFocus()
+                        }
+                    }
                 }
                 .start()
 
@@ -1632,7 +1730,7 @@ class TvShell(private val host: BrowserShell.Host) : BrowserShell, ActionBar.Cal
                     vb.ivMiniatures.setImageResource(0)
                     returnToCurrentTab()
                     vb.flWebViewContainer.visibility = View.VISIBLE
-                    if (findInPage.isOpen) vb.vFindBar.focusField() else focusPage()
+                    if (findInPage.isOpen) vb.vFindBar.focusField() else focusPageSoon()
                 }
                 .start()
     }
