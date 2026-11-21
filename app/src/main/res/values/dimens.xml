@@ -59,7 +59,7 @@
     <dimen name="ds_border_hairline">1dp</dimen>
     <dimen name="ds_border_selected">1.5dp</dimen>
     <!-- The outline of a focused control (the focused fills of the light theme are almost invisible) -->
-    <dimen name="ds_focus_outline">1.5dp</dimen>
+    <dimen name="ds_focus_outline">2.5dp</dimen>
     <dimen name="ds_text_address">18sp</dimen>
     <dimen name="ds_text_toast">18sp</dimen>
     <dimen name="ds_text_menu_item">14sp</dimen>
@@ -357,20 +357,20 @@
     <dimen name="video_osd_gap">14dp</dimen>
     <dimen name="video_osd_button_size">36dp</dimen>
     <dimen name="video_osd_glyph_size">20dp</dimen>
-    <dimen name="video_osd_text_title">18sp</dimen>
-    <dimen name="video_osd_text_caption">13sp</dimen>
-    <dimen name="video_osd_text_time">18sp</dimen>
+    <dimen name="video_osd_text_title">20sp</dimen>
+    <dimen name="video_osd_text_caption">14sp</dimen>
+    <dimen name="video_osd_text_time">20sp</dimen>
     <!-- the progress: its line, the thumb while it plays, while paused, while a seek goes (with its ring), the mark of
          where the video is -->
-    <dimen name="video_osd_progress_height">26dp</dimen>
-    <dimen name="video_osd_line_height">4dp</dimen>
-    <dimen name="video_osd_thumb_radius_playing">5dp</dimen>
-    <dimen name="video_osd_thumb_radius">7dp</dimen>
-    <dimen name="video_osd_thumb_radius_seek">10dp</dimen>
+    <dimen name="video_osd_progress_height">32dp</dimen>
+    <dimen name="video_osd_line_height">6dp</dimen>
+    <dimen name="video_osd_thumb_radius_playing">6dp</dimen>
+    <dimen name="video_osd_thumb_radius">8dp</dimen>
+    <dimen name="video_osd_thumb_radius_seek">12dp</dimen>
     <dimen name="video_osd_thumb_ring">3dp</dimen>
     <dimen name="video_osd_mark_radius">4dp</dimen>
     <!-- the bubble over the thumb while a seek goes: where it goes and how far -->
-    <dimen name="video_osd_bubble_width">100dp</dimen>
+    <dimen name="video_osd_bubble_width">140dp</dimen>
     <dimen name="video_osd_bubble_padding">6dp</dimen>
     <dimen name="video_osd_bubble_gap">12dp</dimen>
     <dimen name="video_osd_text_bubble_delta">13sp</dimen>
@@ -384,7 +384,7 @@
     <!-- what Up and Down do -->
     <dimen name="video_osd_hint_gap">24dp</dimen>
     <dimen name="video_osd_hint_key_gap">8dp</dimen>
-    <dimen name="video_osd_hint_text">16sp</dimen>
+    <dimen name="video_osd_hint_text">18sp</dimen>
 
     <!-- a key of the remote on a toast (the hint about videos) -->
     <dimen name="ds_key_cap_height">24dp</dimen>

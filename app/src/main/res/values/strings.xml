@@ -277,6 +277,9 @@
     <string name="built_in_player">TV Bro player</string>
     <!-- on the seek bar of the built-in player, after the key cap of Down: the menu it opens -->
     <string name="player_menu_hint">Video settings</string>
+    <string name="player_menu_hint_osd">Subtitles &amp; settings</string>
+    <string name="player_seek_back">Back 10 seconds</string>
+    <string name="player_seek_forward">Forward 10 seconds</string>
     <!-- on the seek bar of a fullscreen video, after the key cap of Up: it shows the cursor for the controls of the page -->
     <string name="video_osd_cursor">Cursor</string>
     <!-- the player of the page (on the seek bar of the built-in player, after the key cap of Up: back to it) -->
@@ -287,7 +290,7 @@
     <!-- a toast when the built-in player that opened by itself could not start: the page plays the video on -->
     <string name="player_fallback">The video will continue in the site player</string>
     <!-- the video settings of the built-in player: which player gets the fullscreen videos of the site of the page -->
-    <string name="player_for_site">Player for this site</string>
+    <string name="player_for_site">Player for this website</string>
     <!-- its options; the default one tells what the default is now (player_default_built_in, player_default_site) -->
     <string name="player_for_site_default">Default</string>
     <!-- the short values of the row: the built-in player, the player of the site -->
@@ -330,14 +333,14 @@
     <string name="settings_match_frame_rate">Match the frame rate of videos</string>
     <string name="settings_match_frame_rate_summary">TV Bro player switches the TV to the frame rate of the video, so that it plays smoothly. The screen goes black for a moment when it switches.</string>
     <!-- the video settings of the built-in player: the names of its rows and options -->
-    <string name="player_quality">Quality</string>
-    <string name="player_audio">Audio</string>
+    <string name="player_quality">Picture quality</string>
+    <string name="player_audio">Sound track</string>
     <string name="player_subtitles">Subtitles</string>
-    <string name="player_speed">Speed</string>
+    <string name="player_speed">Playback speed</string>
     <string name="player_auto">Auto</string>
     <string name="player_off">Off</string>
     <!-- the repeat of the video in the video settings of the built-in player -->
-    <string name="player_repeat">Repeat</string>
+    <string name="player_repeat">Repeat video</string>
     <string name="player_repeat_on">On</string>
     <string name="player_repeat_off">Off</string>
     <string name="player_picture_in_picture">Picture in picture</string>

@@ -42,10 +42,11 @@
     <color name="ds_line">#CFDEEE</color>
     <color name="ds_line_strong">#C2D2E3</color>
     <color name="ds_divider">#E0E0E0</color>
-    <color name="ds_focus">#A5D0FF</color>
+    <color name="ds_focus">#1565C0</color>
+    <color name="ds_focus_on_dark">#A5D0FF</color>
     <color name="ds_selected">#5FACFF</color>
     <color name="ds_ink">#4F4F4F</color>
-    <color name="ds_ink_faint">#BDBDBD</color>
+    <color name="ds_ink_faint">#6B6B6B</color>
     <color name="ds_icon">#60768E</color>
     <color name="ds_on_badge">#FFFFFF</color>
     <color name="ds_accent">#48A0FF</color>

@@ -98,6 +98,7 @@
         <item name="tbColorDsIcon">@color/ds_dark_icon</item>
         <item name="tbColorDsOnBadge">@color/ds_dark_on_badge</item>
         <item name="tbColorDsDanger">@color/ds_dark_danger</item>
+        <item name="tbColorDsFocus">@color/ds_focus_on_dark</item>
     </style>
 
     <!-- The rows of the phone settings page: bigger touch targets and text, the pressed look -->

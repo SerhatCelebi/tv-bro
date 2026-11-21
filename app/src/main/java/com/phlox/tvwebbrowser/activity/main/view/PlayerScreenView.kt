@@ -5,7 +5,9 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Color
 import android.os.SystemClock
+import android.text.format.DateUtils
 import android.util.AttributeSet
+import android.view.FocusFinder
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.SurfaceView
@@ -121,6 +123,14 @@ class PlayerScreenView @JvmOverloads constructor(
 
     val isOpen: Boolean get() = isVisible
 
+    /** The panel and the error card keep the keys; during playback the player takes no focus at all */
+    override fun focusSearch(focused: View?, direction: Int): View? {
+        if (isOpen && (vb.vPanel.isOpen || vb.flError.isVisible)) {
+            return FocusFinder.getInstance().findNextFocus(this, focused, direction) ?: focused
+        }
+        return super.focusSearch(focused, direction)
+    }
+
     /** The video is the one the page plays: Up gives it back to the page */
     private var pageMedia = false
     /** The first Up was pressed: a second one within [UP_EXIT_MS] gives the video back to the page */
@@ -157,7 +167,7 @@ class PlayerScreenView @JvmOverloads constructor(
             //Up does not leave the video by itself: Back does, or a second Up within a moment (handled above)
             return true
         }
-    }).apply { hint = context.getString(R.string.player_menu_hint) }
+    }).apply { hint = context.getString(R.string.player_menu_hint_osd) }
 
     init {
         visibility = GONE
@@ -476,7 +486,8 @@ class PlayerScreenView @JvmOverloads constructor(
      */
     private fun settingsPage(focus: Int): PlayerPanelView.Page? {
         val state = player.state.value ?: return null
-        val parameters = player.trackSelection ?: return null
+        //the tracks may not be known yet (the video still loads): the rest of the page works meanwhile
+        val parameters = player.trackSelection
         val rows = ArrayList<PlayerPanelView.Row>()
         fun choice(icon: Int, name: String, value: String, options: List<Pair<String, Boolean>>, choose: (Int) -> Unit) {
             val index = rows.size
@@ -495,10 +506,25 @@ class PlayerScreenView @JvmOverloads constructor(
                 player.choose(type, options[it].choice)
             }
         }
-        tracks(R.drawable.ic_quality, R.string.player_quality, C.TRACK_TYPE_VIDEO, PlayerTracks.qualities(state.tracks, parameters, texts))
-        tracks(R.drawable.ic_audio_track, R.string.player_audio, C.TRACK_TYPE_AUDIO, PlayerTracks.audioTracks(state.tracks, parameters, texts))
-        tracks(R.drawable.ic_subtitles, R.string.player_subtitles, C.TRACK_TYPE_TEXT,
-            PlayerTracks.subtitles(state.tracks, parameters, texts))
+        //the two seeks first: they work while the tracks are still being read
+        val position = state.media.positionAt(SystemClock.elapsedRealtime()).coerceAtLeast(0.0)
+        fun seekRow(icon: Int, label: Int, delta: Double) {
+            val target = state.media.duration?.let { (position + delta).coerceIn(0.0, it) }
+                ?: (position + delta).coerceAtLeast(0.0)
+            rows += PlayerPanelView.Row(icon, context.getString(label), value = DateUtils.formatElapsedTime(target.toLong())) {
+                player.seekBy(delta)
+                vb.vPanel.close()
+                keys.showHint()
+            }
+        }
+        seekRow(R.drawable.ic_fast_rewind, R.string.player_seek_back, -10.0)
+        seekRow(R.drawable.ic_fast_forward, R.string.player_seek_forward, 10.0)
+        if (parameters != null) {
+            tracks(R.drawable.ic_quality, R.string.player_quality, C.TRACK_TYPE_VIDEO, PlayerTracks.qualities(state.tracks, parameters, texts))
+            tracks(R.drawable.ic_audio_track, R.string.player_audio, C.TRACK_TYPE_AUDIO, PlayerTracks.audioTracks(state.tracks, parameters, texts))
+            tracks(R.drawable.ic_subtitles, R.string.player_subtitles, C.TRACK_TYPE_TEXT,
+                PlayerTracks.subtitles(state.tracks, parameters, texts))
+        }
         val speed = player.speed
         choice(R.drawable.ic_speed, context.getString(R.string.player_speed), PlayerTracks.speedLabel(speed),
             PlayerTracks.SPEEDS.map { PlayerTracks.speedLabel(it) to (it == speed) }) { player.setSpeed(PlayerTracks.SPEEDS[it]) }

@@ -45,4 +45,5 @@
     <color name="ds_icon">@color/ds_dark_icon</color>
     <color name="ds_on_badge">@color/ds_dark_on_badge</color>
     <color name="ds_danger">@color/ds_dark_danger</color>
+    <color name="ds_focus">@color/ds_focus_on_dark</color>
 </resources>

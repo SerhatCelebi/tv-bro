@@ -4,8 +4,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
-    android:layout_height="@dimen/ds_size_toast_height"
+    android:layout_height="wrap_content"
+    android:minHeight="@dimen/ds_size_toast_height"
     android:minWidth="@dimen/ds_size_toast_min_width"
+    android:paddingTop="@dimen/ds_space_gutter"
+    android:paddingBottom="@dimen/ds_space_gutter"
     android:background="@drawable/ds_toast_bg"
     android:elevation="4dp"
     android:paddingStart="@dimen/ds_toast_padding_horizontal"
@@ -24,7 +27,8 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/ds_space_icon_text"
         android:ellipsize="end"
-        android:singleLine="true"
+        android:maxLines="3"
+        android:singleLine="false"
         android:textColor="?attr/tbColorDsOnToast"
         tools:text="Facebook tab closed"/>
 </LinearLayout>

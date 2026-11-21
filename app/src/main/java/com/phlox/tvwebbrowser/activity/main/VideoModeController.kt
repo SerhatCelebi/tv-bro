@@ -291,10 +291,10 @@ class VideoModeController(private val host: Host) {
     companion object {
         /** Seconds of a press of Left or Right */
         const val STEP = 10.0
-        private const val OSD_SHOWN_MS = 3000L
+        private const val OSD_SHOWN_MS = 5000L
         /** The seek bar with a new hint, as when the video goes fullscreen with a stream the built-in player can play */
-        const val HINT_SHOWN_MS = 5000L
-        private const val SEEK_SHOWN_MS = 2000L
+        const val HINT_SHOWN_MS = 8000L
+        private const val SEEK_SHOWN_MS = 3000L
         /** Seconds: a position this near to the target means the page got there */
         private const val SEEK_REACHED_TOLERANCE = 1.5
         private val VIDEO_KEYS = setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP,
